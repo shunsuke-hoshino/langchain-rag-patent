@@ -14,6 +14,7 @@ from langchain_community.vectorstores.vectara import (
 )
 import re
 
+
 #if 'WEBSITE_HOSTNAME' not in os.environ:
 load_dotenv(override=True)
 vectara_customer_id = os.getenv("VECTARA_CUSTOMER_ID")
@@ -41,6 +42,16 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=openai_api_key)
 
+def chat_with_ai(template, message):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",  # または他の適切なモデルを選択
+        messages=[
+            {"role": "system", "content": template},
+            {"role": "user", "content": message}
+        ]
+    )
+    return response.choices[0].message.content
+
 app = Flask(__name__)
 
 @app.route("/")
@@ -53,7 +64,9 @@ def digest():
 
 @app.route('/generate_formula', methods=['POST'])
 # ここで論理式を生成するロジックを実装
+
 def generate_logic_expression():
+    
     ai_model = "gpt-4o-mini"
     data = request.get_json()
     product_name = data.get('productName')
@@ -65,33 +78,17 @@ def generate_logic_expression():
     #また国際特許分類（IPC）を細分化した日本国特許庁 独自の 特許 文献の分類であるFIを*でつないで論理式に含めてください。ただし、私が与えた全ての内容のみに基づいて、それ以外の情報を創造してはいけません。上記FI表です。{fi}
     # {product_name}からIPC、FI、Fタームを*でつないで論理式に含めてください。IPC、FI、Fタームは情報が正確かどうかわからない場合は含めないでください。含めない場合はIPC情報といった文言はいりません。
     #print(number)
+    template = "あなたは特許調査のプロフェッショナルであり、国際特許分類（IPC）を細分化した日本国特許庁独自の特許文献の分類であるFIだけを答えます。わからない場合は「 」を出力してください。\n"
     prompt = f"FI情報{page_contents}\n商品名{product_name}に基づいて特許調査のFIを出力してください。関係がありそうだと考えたFI記号は+の文字でつなげて含めてください。半角スペースなどは含めないでください。ただし、私が与えた全ての内容のみに基づいて、それ以外の情報を創造してはいけません。\n日本語と記号だけで構成してください"
-    tempcomp = client.chat.completions.create(
-        model=ai_model,
-        temperature=0,
-        messages=[
-            {"role": "system", "content": "あなたは特許調査のプロフェッショナルであり、国際特許分類（IPC）を細分化した日本国特許庁独自の特許文献の分類であるFIだけを答えます。わからない場合は「 」を出力してください。\n"},
-            {"role": "user", "content": prompt},
-        ]
-    )
-    result_fi=tempcomp.choices[0].message.content
+    result_fi=chat_with_ai(template, prompt)
     print(result_fi)
-
-    prompt = f"商品名: {product_name}\nキーワード: {keywords}\nこれらに基づいて特許調査の論理式を生成してください。{product_name}と{keywords}から特許課題を類推し、論理式に含めてください。\n{product_name}と{keywords}の類似語を{number}の数だけ調べ、論理式に含めてください。\n日本語と記号だけで構成してください"
-    completion = client.chat.completions.create(
-        model=ai_model,
-        temperature=0,
-        messages=[
-            {"role": "system", "content": "あなたは特許調査のプロフェッショナルであり、特許検索の式だけを答えます。\n論理式はORを+と表示し、ANDを*と表示してください。\n類似語は+で繋げるようにしてください。それ以外は*で繋げてください。\nまた次のように「火傷+やけど+火傷予防+やけど防止」という結果だと結果(火傷・やけど)と対策(火傷予防・やけど防止)が論理式で一緒になっています。そのような場合は原因・結果・対策を分けたうえで*でつないで表記してください。\n論理式の形の例を与えます。\n(商品名類義語+商品名類義語+商品名類義語) * (キーワード類義語+キーワード類義語+キーワード類義語)...etc\n具体的な例としてはキーワード：「絡まる」だった場合、絡み、挟ま、巻き付、キーワード：「予防」だった場合、防ぐ、阻止といったものも論理式に含んでください。\n上記はあくまでも具体例です。\n類義語でも「~する」といった言葉をつけたものは省いてください。例: 予防+予防する+防止+防ぐ→予防+防止+防ぐ\nあなたなら出来る"},
-            {"role": "user", "content": prompt},
-        ]
-    )
-
+    template2 = "あなたは特許調査のプロフェッショナルであり、特許検索の式だけを答えます。\n論理式はORを+と表示し、ANDを*と表示してください。\n類似語は+で繋げるようにしてください。それ以外は*で繋げてください。\nまた次のように「火傷+やけど+火傷予防+やけど防止」という結果だと結果(火傷・やけど)と対策(火傷予防・やけど防止)が論理式で一緒になっています。そのような場合は原因・結果・対策を分けたうえで*でつないで表記してください。\n論理式の形の例を与えます。\n(商品名類義語+商品名類義語+商品名類義語) * (キーワード類義語+キーワード類義語+キーワード類義語)...etc\n具体的な例としてはキーワード：「絡まる」だった場合、絡み、挟ま、巻き付、キーワード：「予防」だった場合、防ぐ、阻止といったものも論理式に含んでください。\n上記はあくまでも具体例です。\n類義語でも「~する」といった言葉をつけたものは省いてください。例: 予防+予防する+防止+防ぐ→予防+防止+防ぐ\nあなたなら出来る"
+    prompt2 = f"商品名: {product_name}\nキーワード: {keywords}\nこれらに基づいて特許調査の論理式を生成してください。{product_name}と{keywords}から特許課題を類推し、論理式に含めてください。\n{product_name}と{keywords}の類似語を{number}の数だけ調べ、論理式に含めてください。\n日本語と記号だけで構成してください"
     #print("OpenAI API response: ", completion.choices[0].message.content) # レスポンスから内容のみを取得
     
-    edit = completion.choices[0].message.content
+    edit = chat_with_ai(template2, prompt2)
     print(edit)
-    print(completion.usage)
+    #print(completion.usage)
     editdata = []
     editdata = edit.split('*')
     #print("edi:",editdata)
