@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>特許調査支援ツール</title>
+    <link rel="stylesheet" href="/static/digeststyle.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div id="processing">
+        <ul class="menu">
+            <li><a href="/">特許調査支援ツール</a></li>
+            <li><a href="digest.html">要約</a></li>
+            <li><a href="#contact">temp2</a></li>
+            <li><a href="#about">temp3</a></li>
+        </ul>
+        <form @submit.prevent="fetchInfo">
+            特許情報をコピー&ペーストお願いします。<br>
+            特許情報：<br><input type="text" v-model="productinfo" placeholder="特許情報を入力"><br>
+            <button type="submit">情報送信</button><br>
+            特許まとめを表示↓ ※生成に時間がかかります。
+                <!-- <textarea v-model="text" rows="2"  cols="50" v-text="responseData"></textarea>
+                <textarea v-model="responseData" rows="10" cols="50" placeholder="要約がここに表示されます。"></textarea> responseDataを表示 -->
+                <div class="summary-container">
+                    <div v-if="responseData" v-html="responseData"></div>
+                    <div v-else>要約がまだありません。</div> <!-- デフォルトメッセージ -->
+                </div>
+                
+        </form>
+        <!-- <div v-if="responseData">
+            <h2>要約した文章を表示<br>:</h2>
+            <p v-text="responseData"></p>
+        </div> -->
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.11/dist/vue.js"></script>
+    <script src="/static/digestscript.js"></script>
+</body>
+</html>
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>特許調査支援ツール</title>
+    <link rel="stylesheet" href="/static/digeststyle.css">
+</head>
+<body>
+    <div id="processing">
+        <ul class="menu">
+            <li><a href="/">特許調査支援ツール</a></li>
+            <li><a href="digest.html">要約・比較</a></li>
+            <li><a href="#comparison">temp</a></li>
+        </ul>
+        このページでは特許のpdfをアップロード、アップロードされたファイルを要約<br>
+        または複数ファイルの特許pdfを比較することが出来ます。<br><br>
+        <div class="upload_zone">
+            <input type="file" class="input_file" @upload="handleFileSelect">
+            <div id="file-drop-zone" @drop="handleDrop" @dragover.prevent>
+                <label for="file-input" class="drop-zone">ここにファイルをドラッグ＆ドロップ</label>
+            </div>
+        </div>
+
+        <div id="pdf-preview">
+            <object v-for="file in pdfFiles" :data="file" type="application/pdf" width="100%" height="500"></object>
+        </div>
+
+        <div id="result">
+            <p>{{ processedResult }}</p>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.11/dist/vue.js"></script>
+    <script src="/static/digestscript.js"></script>
+</body>
+</html> -->

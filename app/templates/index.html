@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>特許調査支援ツール</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="app">
+        <ul class="menu">
+            <li><a href="/">特許調査支援ツール</a></li>
+            <li><a href="digest.html">要約</a></li>
+            <li><a href="#contact">temp2</a></li>
+            <li><a href="#about">temp3</a></li>
+        </ul>
+        <form @submit.prevent="generateFormula">
+            キーワードは何個でも入力可能です。空白などで区切って入力してください。<br>
+            ※生成されるまでに少し時間がかかります。<br>
+            商品名：<br><input type="text" v-model="productName" placeholder="商品名を入力"><br>
+            論理式に含めたいキーワード：<br><input type="text" v-model="keywords" placeholder="キーワードを入力"><br>
+            項目数(生成される論理式の項目)：<br><input type="text" v-model="number" placeholder="数字を入力"><br>
+            <button type="submit">論理式生成</button><br>
+        </form>
+        <div>
+            <h2>生成された論理式</h2>
+            <table border="1">
+                <tr>
+                    <th>式No.</th>
+                    <th>検索項目</th>
+                    <th>論理式</th>
+                </tr>
+                <tr v-for="(line, index) in splitResult" :key="index">
+                    <td v-text="'S' + (index + 1).toString().padStart(3, '0')"></td>
+                    <td>
+                        <select v-model="searchItems[index]">
+                            <option value="全文">全文</option>
+                            <option value="IPC">IPC</option>
+                            <option value="FI">FI</option>
+                            <option value="論理式">論理式</option>
+                            <option value="名称+要約+請求項">名称+要約+請求項</option>
+                            <option value="出願人・権利者名">出願人・権利者名</option>
+                            <option value="公開・公表番号">公開・公表番号</option>
+                        </select>
+                    </td>
+                    <td><textarea v-model="splitResult[index]" @input="updateResult" rows="2" cols="50"></textarea></td>
+                    <td>
+                        
+                        <button @click="copySingleFormula(index)">論理式<br>コピー</button><br><br>
+                        <button @click="del(index)">削除</button>
+                    </tr>
+                </tr>
+            </table>
+            <button @click="add">行を追加</button><br><br>
+        </div>
+        <h4>パテントスクウェアの式読み込みファイルダウンロード</h4><br>
+        <button @click="downloadFormula">ダウンロード</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.11/dist/vue.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
+
