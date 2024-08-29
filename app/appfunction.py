@@ -245,14 +245,7 @@ def sendinfo():
     15. 非特許文献（学術論文、技術標準など）との関連性があれば指摘し、技術の背景や発展状況を補足してください。\n
     回答は必ず日本語で行い、論理的かつ具体的に説明してください。情報の解釈には不確実性が伴うことを明記し、専門家による追加の分析や確認を推奨してください。また、検索・分析の制約や限界についても適切に言及してください。"
     """
-    completion = client.chat.completions.create(
-        model=ai_model,
-        messages=[
-            {"role": "system", "content": template},
-            {"role": "user", "content": prompt},
-        ]
-    )
-
+    completion = chat_with_ai(template,prompt)
     processed_data = completion.choices[0].message.content
     print(processed_data)
     return jsonify(processed_data)
