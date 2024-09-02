@@ -40,7 +40,7 @@ new Vue({
             .then(data => {
                 this.result = data.join('.');
                 this.searchItems = Array(this.splitResult.length).fill('全文');  // 初期値を設定
-                //this.searchItems[this.searchItems.length - 1] = 'FI';  // 最後の項目を「FI」に設定
+                this.searchItems[this.searchItems.length - 1] = 'FI';  // 最後の項目を「FI」に設定
                 //this.searchItems.slice(-1)[0].fill('FI')
             })
             .catch(error => {
