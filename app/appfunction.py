@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify, send_file,Response
 from openai import OpenAI
 from dotenv import load_dotenv
 import requests
@@ -13,6 +13,7 @@ from langchain_community.vectorstores.vectara import (
     VectaraQueryConfig,
 )
 import re
+import time
 
 
 #if 'WEBSITE_HOSTNAME' not in os.environ:
@@ -41,15 +42,17 @@ retriever = vectara.as_retriever(config=config)
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=openai_api_key)
+ai_model = "gpt-4o-mini"
 
 def chat_with_ai(template, message):
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # または他の適切なモデルを選択
+        model=ai_model,  # または他の適切なモデルを選択
         messages=[
             {"role": "system", "content": template},
             {"role": "user", "content": message}
         ]
     )
+    print(response.usage.prompt_tokens)
     return response.choices[0].message.content
 
 app = Flask(__name__)
@@ -66,8 +69,6 @@ def digest():
 # ここで論理式を生成するロジックを実装
 
 def generate_logic_expression():
-    
-    ai_model = "gpt-4o-mini"
     data = request.get_json()
     product_name = data.get('productName')
     keywords = data.get('keywords')
@@ -84,12 +85,14 @@ def generate_logic_expression():
     #print("edi:",editdata)
     print(editdata[0])
 
-    response = retriever.invoke(editdata[0])
+    response = retriever.invoke(product_name)
+    response2 = retriever.invoke(editdata[0])
     page_contents = [doc.page_content for doc in response]
+    page_contents2 = [doc.page_content for doc in response2]
     print(page_contents)
     
     template2 = "あなたは特許調査のプロフェッショナルであり、国際特許分類（IPC）を細分化した日本国特許庁独自の特許文献の分類であるFIだけを答えます。わからない場合は「 」を出力してください。\n"
-    prompt2 = f"FI情報{page_contents}\n商品名{product_name}\nに基づいて特許調査のFI記号のみを出力してください。関係がありそうだと考えたFI記号は+の文字でつなげて含めてください。半角スペースなどは含めないでください。ただし、私が与えた全ての内容のみに基づいて、それ以外の情報を創造してはいけません。\n日本語と記号だけで構成してください"
+    prompt2 = f"FI情報{page_contents},{page_contents2}\n商品名{product_name}\nに基づいて特許調査のFI記号のみを出力してください。関係がありそうだと考えたFI記号は+の文字でつなげて含めてください。半角スペースなどは含めないでください。ただし、私が与えた全ての内容のみに基づいて、それ以外の情報を創造してはいけません。\n日本語と記号だけで構成してください"
     result_fi=chat_with_ai(template2, prompt2)
     print(result_fi)
     
@@ -184,48 +187,36 @@ def download_formula():
     # ファイルのURLを返す
     return jsonify({'file_url': f'/{file_path}'})
 
+@app.route('/stream_response', methods=['POST'])
+def stream_response():
+    data = request.get_json()
+    productinfo = data.get('productinfo')
+    buffer = ""  # バッファを初期化
 
+    def generate_stream():
+        nonlocal buffer
+        for new_content in openai_stream_function(productinfo):  # OpenAIのストリーミング関数を呼び出す
+            buffer += new_content  # バッファに追加
+            buffer = buffer.replace(' ', '')
+            # 完全なタグを探して送信
+            while True:
+                # バッファ内の完全なタグを探す
+                match = re.search(r'(<[^>]+>.*?</[^>]+>)', buffer)
+                if match:
+                    chunk = match.group(0)
+                    yield f"data: {chunk}\n\n"  # 完全なタグを送信
+                    buffer = buffer.replace(chunk, '', 1)  # 送信した部分をバッファから削除
+                else:
+                    break
 
-@app.route('/sendinfo', methods=['POST'])
-def sendinfo():
-    def extract_publication_number(text):
-        # 正規表現を使用して【公開番号】を抽出
-        match = re.search(r'【公開番号】(.*?)\s', text)
-        if match:
-            return match.group(1)  # マッチした部分を返す
-        return None  # マッチしなかった場合はNoneを返す
+        # 残りのバッファがあれば送信
+        if buffer:
+            yield f"data: {buffer}\n\n"
 
-    
+    return Response(generate_stream(), content_type='text/event-stream')
 
-        
-    ai_model = "gpt-4o-mini"
-    info = request.get_json()
-    productinfo = info.get('productinfo') # この中身(infoの中のproductinfoはdigest.htmlのv-model=productinfoに基づいて決まっている。)
-    # 発明の名称を抽出
-    # s1 = re.search(r'【発明の名称】(.*?)\s', productinfo)
-    # # 【FI】を抽出
-    # fi_match = re.search(r'【ＦＩ】\s*(.*?)\s*【', productinfo)
-    # fi_info = fi_match.group(1) if fi_match else None  # マッチした部分を取得
-
-    # print("s1:",s1)
-    # print("s2:",fi_info)
-    # # FI表.txtに発明の名称とFIを追加予定 joinならできるかも
-    # fstr = open('app/FI表.txt', 'r', encoding='UTF-8')
-    # fs = fstr.read()
-    # print(type(fs))
-    # fs.append(s1 + ":" + fi_info)
-    # print(fs)
-
-    #print(info)
-    #print(productinfo)
-    publication_number = extract_publication_number(productinfo)
-    #print(publication_number)
-    # ファイルに書き込む
-    file_path = f"./app/patedata/{publication_number}.md"  # 公開番号をファイル名に使用
-    #file_path = "./app/patedata/output.md"  # ファイルのパスと名前を指定してください
-    with open(file_path, "w", encoding="utf-8") as file:
-        file.write(productinfo)
-    
+# OpenAIのストリーミング関数
+def openai_stream_function(productinfo):
     prompt = f"{productinfo}\nこの特許の内容を、わかりやすく詳しく解説してください。ただし、私が与えた全ての内容のみに基づいて、それ以外の情報を創造してはいけません。意見や推測も避けてください。情報が正確かどうか二度確認してから出力をしてください。またこの特許文書が示す特許にある、【弱点や課題】があれば指摘してください。また、他事業者によってこの特許が【特許回避される懸念箇所】があれば指摘してください。日本語だけで回答してください。"
     template = """あなたは特許調査のプロフェッショナルであり、特許の要約を答えます。HTML形式で答えてください。```htmlといった表記はいりません。\n
     回答の際は以下の点に注意してください：\n
@@ -257,18 +248,33 @@ def sendinfo():
     <p>{この特許の技術的特徴に関する記述}</p>
 
     <h2>特許請求項の要点：</h2>
-    <p>{一つ一つの特許請求項に関する記述}</p>
+    <ul>
+    <li>{請求項1に関する記述}</li>
+    <li>{請求項2に対する記述}</li>
+    <li>{一つ一つの特許請求項に関する記述}</li>
+    </ul>
+    <p>{請求項に対するまとめ}</p>
 
     <h2>課題と弱点：</h2>
     <p>{この特許の課題や弱点に関する記述}</p>
     <h2>特許回避される懸念箇所：</h2>
     <p>{この特許の特許回避される懸念箇所に関する記述}</p>
-    結論：</h2>
+    <h2>結論：</h2>
     <p>{この特許に関する結論に関する記述}</p>
     """
-    processed_data = chat_with_ai(template,prompt)
-    print(processed_data)
-    return jsonify(processed_data)
+
+    stream = client.chat.completions.create(
+        model=ai_model,
+        messages=[
+            {"role": "system", "content": template},
+            {"role": "user", "content": prompt}
+        ],
+        stream=True,
+    )
+    for chunk in stream:
+        if chunk.choices[0].delta.content is not None:
+            #print(chunk.choices[0].delta.content, end="")
+            yield chunk.choices[0].delta.content  # ストリーミングされたコンテンツを返す
     
 # Flaskのルートにファイルを受け取るエンドポイントを作成 
 # @app.route('/upload', methods=['POST'])

@@ -2,7 +2,11 @@ new Vue({
     el: '#processing',
     data: {
         productinfo: '',
-        responseData: null,
+        responseData: '',
+        answer: '',  // answerをデータプロパティとして追加
+        askResponse: {},  // askResponseをデータプロパティとして追加
+        answers: [],  // answersをデータプロパティとして追加
+        question: ''  // questionをデータプロパティとして追加
     },
     computed: {
         renderedMarkdown() {
@@ -10,23 +14,54 @@ new Vue({
         }
     },
     methods: {
+        updateState(newContent) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    this.answer += newContent;  // answerを更新
+                    const latestResponse = {
+                        ...this.askResponse,
+                        choices: [{ ...this.askResponse.choices[0], message: { content: this.answer, role: this.askResponse.choices[0].message.role } }]
+                    };
+                    this.answers.push([this.question, latestResponse]);  // answersを更新
+                    resolve(null);
+                }, 33);
+            });
+        },
         fetchInfo() {
-            fetch('/sendinfo', {
+            fetch('/stream_response', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ productinfo: this.productinfo })
             })
-            .then(response => response.json())
-            .then(data => {
-                this.responseData = data; // 受け取ったデータを格納
-                console.log('Received data:', this.responseData); // デバッグ用
-            })
-            .catch(error => {
-                console.error('Error:', error);
+            .then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let result = '';
+
+                const readStream = () => {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            this.responseData = result;  // 最終的な応答を設定
+                            return;
+                        }
+                        
+                        const chunk = decoder.decode(value, { stream: true });
+                        const cleanedChunk = chunk.replace(/^data: /gm, '');
+                        result += cleanedChunk;  // 結果に追加
+                        
+                        // responseDataを更新
+                        //this.responseData = result;  // ここで表示を更新
+                        this.responseData = result;  // ここで表示を更新
+                        this.updateState(cleanedChunk);  // ストリーミング中の応答を更新
+                        readStream();  // 次のチャンクを読み込む
+                    });
+                };
+
+                readStream();  // ストリーミングを開始
             });
-        },
+        }
     }
 });
 // new Vue({

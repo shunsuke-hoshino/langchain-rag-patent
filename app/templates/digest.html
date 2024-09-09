@@ -11,7 +11,7 @@
         <ul class="menu">
             <li><a href="/">特許調査支援ツール</a></li>
             <li><a href="digest.html">要約</a></li>
-            <li><a href="#contact">temp2</a></li>
+            <li><a href="idea_generate.html">アイディア生成</a></li>
             <li><a href="#about">temp3</a></li>
         </ul>
         <form @submit.prevent="fetchInfo">
@@ -22,10 +22,11 @@
                 <!-- <textarea v-model="text" rows="2"  cols="50" v-text="responseData"></textarea>
                 <textarea v-model="responseData" rows="10" cols="50" placeholder="要約がここに表示されます。"></textarea> responseDataを表示 -->
                 <div class="summary-container">
-                    <div v-if="responseData" v-html="responseData"></div>
-                    <div v-else>要約がまだありません。</div> <!-- デフォルトメッセージ -->
+                    <div id="response">
+                        <div v-if="responseData" v-html="responseData"></div>
+                        <div v-else>要約がまだありません。</div> <!-- デフォルトメッセージ -->
+                    </div>
                 </div>
-                
         </form>
         <!-- <div v-if="responseData">
             <h2>要約した文章を表示<br>:</h2>
