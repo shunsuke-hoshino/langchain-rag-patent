@@ -93,11 +93,11 @@ def generate_logic_expression():
         response = retriever.invoke(item)  # 各アイテムに対してinvokeを呼び出す
         page_contents = [doc.page_content for doc in response]  # ページコンテンツを取得
         page_contents_list.append(page_contents)  # 結果をリストに追加
-        print(page_contents_list)
-
+        
+    print(page_contents_list)
         
     template2 = "あなたは特許調査のプロフェッショナルであり、国際特許分類（IPC）を細分化した日本国特許庁独自の特許文献の分類であるFIだけを答えます。わからない場合は「 」を出力してください。\n"
-    prompt2 = f"FI情報{page_contents_list}\n商品名{product_name}\nに基づいて特許調査のFI記号のみを出力してください。関係がありそうだと考えたFI記号は+の文字でつなげて含めてください。半角スペースなどは含めないでください。ただし、私が与えた全ての内容のみに基づいて、それ以外の情報を創造してはいけません。\n日本語と記号だけで構成してください"
+    prompt2 = f"FI情報{page_contents_list}\n商品名{product_name}\nに基づいて特許調査のFI記号のみを出力してください。関係がありそうだと考えたFI記号は+の文字でつなげて含めてください。5つ程度出力してください。半角スペースなどは含めないでください。ただし、私が与えた全ての内容のみに基づいて、それ以外の情報を創造してはいけません。\n日本語と記号だけで構成してください"
     result_fi=chat_with_ai(template2, prompt2)
     #print("結果",result_fi)
     
