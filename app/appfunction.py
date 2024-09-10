@@ -65,6 +65,10 @@ def index():
 def digest():
     return render_template("digest.html")
 
+@app.route("/idea_generate.html")
+def idea():
+    return render_template("idea_generate.html")
+
 @app.route('/generate_formula', methods=['POST'])
 # ここで論理式を生成するロジックを実装
 
